@@ -87,9 +87,16 @@ function App() {
       for (let i = 1; i <= 20; i++) {
         const item = await contract.getListing(i);
         if (item.active) {
-          const tokenUri = await contract.tokenURI(item.tokenId);
-          const metadata = await fetch(tokenUri).then(res => res.json());
-          active.push({ ...item, image: metadata.image });
+          let image = "";
+          try {
+            const tokenUri = await contract.tokenURI(item.tokenId);
+            const metadata = await fetch(tokenUri).then(res => res.json());
+            image = metadata.image || ""; // Fallback if no image
+          } catch (metaErr) {
+            console.warn(`Failed to load metadata for token ${item.tokenId}:`, metaErr);
+          }
+  
+          active.push({ ...item, image });
         }
       }
       setListings(active);
@@ -97,6 +104,7 @@ function App() {
       console.error("Error loading listings", err);
     }
   }
+  
   
   return (
     <div style={{ padding: "2rem" }}>
