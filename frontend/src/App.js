@@ -18,7 +18,11 @@ function App() {
   const [listings, setListings] = useState([]);
   const [ipfsImageUrl, setIpfsImageUrl] = useState("");
   const [metadataUrl, setMetadataUrl] = useState("");
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("dark") === "true");
+
+  const [darkMode, setDarkMode] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("dark") === "true"
+  );
+
   const [stats, setStats] = useState({ totalMinted: 0, totalListings: 0 });
 
   useEffect(() => {
@@ -27,7 +31,9 @@ function App() {
 
   useEffect(() => {
     document.body.style.backgroundColor = darkMode ? "#121212" : "#fff";
-    localStorage.setItem("dark", darkMode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dark", darkMode);
+    }
   }, [darkMode]);
 
   async function connectWallet() {
@@ -41,7 +47,6 @@ function App() {
       setProvider(prov);
       setSigner(signer);
       setContract(contract);
-
       console.log("✅ Wallet connected");
     } catch (err) {
       console.error("Wallet connection failed", err);
@@ -117,9 +122,9 @@ function App() {
             const metadata = await fetch(tokenUri).then((res) => res.json());
             image = metadata.image || "";
           } catch (metaErr) {
-            console.warn(`Failed to load metadata for token ${item.tokenId}:`, metaErr);
+            console.warn(`Failed to load metadata for token ${i}:`, metaErr);
           }
-          active.push({ ...item, image });
+          active.push({ ...item, image, id: i });
         }
       }
 
@@ -159,39 +164,42 @@ function App() {
       <hr />
       <h2>🛍️ Listings</h2>
       {listings.length === 0 && <p>No active listings.</p>}
-      {listings.map((item, index) => (
-        <div
-          key={index}
-          style={{
-            border: "1px solid #ccc",
-            padding: "1rem",
-            marginBottom: "1rem",
-            backgroundColor: darkMode ? "#1e1e1e" : "#f9f9f9",
-          }}
-        >
-          <img
-            src={item.image || "/placeholder.png"}
-            alt="NFT Preview"
-            style={{ width: "200px", marginBottom: "10px" }}
-          />
-          <p><strong>Token ID:</strong> {item.tokenId.toString()}</p>
-          <p><strong>Seller:</strong> {item.seller}</p>
-          <p><strong>Price:</strong> {ethers.formatEther(item.price)} ETH</p>
-          <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>
-            Buy
-          </button>
-          <a
-            href={`https://twitter.com/intent/tweet?text=Check%20out%20this%20NFT%20on%20LifeIsNFTs!%0AToken%20ID:%20${item.tokenId.toString()}%0APrice:%20${ethers.formatEther(item.price)}%20ETH%0A${window.location.href}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "inline-block", marginTop: "10px", color: "#1DA1F2" }}
+      {listings.map((item, index) => {
+        const tokenId = item.tokenId?.toString?.() || item.id?.toString?.() || `${index + 1}`;
+        const price = item.price ? ethers.formatEther(item.price) : "0";
+        return (
+          <div
+            key={index}
+            style={{
+              border: "1px solid #ccc",
+              padding: "1rem",
+              marginBottom: "1rem",
+              backgroundColor: darkMode ? "#1e1e1e" : "#f9f9f9",
+            }}
           >
-            🐦 Share on X
-          </a>
-        </div>
-      ))}
+            <img
+              src={item.image || "/placeholder.png"}
+              alt="NFT Preview"
+              style={{ width: "200px", marginBottom: "10px" }}
+            />
+            <p><strong>Token ID:</strong> {tokenId}</p>
+            <p><strong>Seller:</strong> {item.seller}</p>
+            <p><strong>Price:</strong> {price} ETH</p>
+            <button onClick={() => buyNFT(tokenId, price)}>Buy</button>
+            <a
+              href={`https://twitter.com/intent/tweet?text=Check%20out%20this%20NFT%20on%20LifeIsNFTs!%0AToken%20ID:%20${tokenId}%0APrice:%20${price}%20ETH%0A${window.location.href}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-block", marginTop: "10px", color: "#1DA1F2" }}
+            >
+              🐦 Share on X
+            </a>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export default App;
+
