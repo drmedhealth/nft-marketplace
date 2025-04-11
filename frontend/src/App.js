@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import { contractAddress, contractABI } from "./constants";
+import PinataUploader from "./PinataUploader";
+import MetadataUploader from "./MetadataUploader"; // ✅ NEW
 
 function App() {
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [contract, setContract] = useState(null);
   const [listings, setListings] = useState([]);
+  const [ipfsImageUrl, setIpfsImageUrl] = useState(""); // ✅ Image URL from IPFS
+  const [metadataUrl, setMetadataUrl] = useState("");   // ✅ Metadata URL
 
-  // Connect MetaMask on page load
   useEffect(() => {
     connectWallet();
   }, []);
@@ -32,11 +35,15 @@ function App() {
     }
   }
 
+  // ✅ Updated to use metadataUri
   async function mintNFT() {
-    const tokenURI = prompt("Enter IPFS URL (e.g., https://.../metadata.json):");
-    if (!tokenURI) return;
+    if (!metadataUrl) {
+      alert("Please upload metadata first.");
+      return;
+    }
+
     try {
-      const tx = await contract.createToken(tokenURI);
+      const tx = await contract.createToken(metadataUrl);
       await tx.wait();
       alert("🎉 NFT Minted!");
     } catch (err) {
@@ -91,9 +98,19 @@ function App() {
     <div style={{ padding: "2rem" }}>
       <h1>🖼️ NFT Marketplace (Sepolia)</h1>
       <button onClick={connectWallet}>🔌 Connect Wallet</button>
-      <button onClick={mintNFT}>🎨 Mint NFT</button>
+      <button onClick={mintNFT}>🎨 Mint NFT (Metadata + IPFS)</button>
       <button onClick={listNFT}>📤 List NFT</button>
       <button onClick={loadListings}>🔄 Load Listings</button>
+
+      <hr />
+      {/* ✅ Upload Image to IPFS */}
+      <PinataUploader onUpload={(url) => setIpfsImageUrl(url)} />
+
+      {/* ✅ Upload Metadata to IPFS */}
+      <MetadataUploader
+        imageUrl={ipfsImageUrl}
+        onMetadataUploaded={(url) => setMetadataUrl(url)}
+      />
 
       <hr />
       <h2>🛍️ Listings</h2>
