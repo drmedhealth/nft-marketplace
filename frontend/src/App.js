@@ -3,8 +3,13 @@ import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import { contractAddress, contractABI } from "./constants";
 import PinataUploader from "./PinataUploader";
-import MetadataUploader from "./MetadataUploader"; // ✅ NEW
-import LogoTitle from "./LogoTitle"; // ✅ Logo component
+import MetadataUploader from "./MetadataUploader";
+import LogoTitle from "./LogoTitle";
+
+// 🟡 Read-only provider (Alchemy)
+const readOnlyProvider = new ethers.JsonRpcProvider(
+  "https://eth-mainnet.g.alchemy.com/v2/bEIb2Kv5L64Y2MjEMJFfcVDW2M2hyyyM"
+);
 
 function App() {
   const [provider, setProvider] = useState(null);
@@ -13,10 +18,17 @@ function App() {
   const [listings, setListings] = useState([]);
   const [ipfsImageUrl, setIpfsImageUrl] = useState("");
   const [metadataUrl, setMetadataUrl] = useState("");
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("dark") === "true");
+  const [stats, setStats] = useState({ totalMinted: 0, totalListings: 0 });
 
   useEffect(() => {
-    connectWallet();
+    loadListings();
   }, []);
+
+  useEffect(() => {
+    document.body.style.backgroundColor = darkMode ? "#121212" : "#fff";
+    localStorage.setItem("dark", darkMode);
+  }, [darkMode]);
 
   async function connectWallet() {
     try {
@@ -30,7 +42,7 @@ function App() {
       setSigner(signer);
       setContract(contract);
 
-      console.log("✅ Connected to wallet");
+      console.log("✅ Wallet connected");
     } catch (err) {
       console.error("Wallet connection failed", err);
     }
@@ -41,7 +53,10 @@ function App() {
       alert("Please upload metadata first.");
       return;
     }
-
+    if (!contract) {
+      alert("Connect wallet first.");
+      return;
+    }
     try {
       const tx = await contract.createToken(metadataUrl);
       await tx.wait();
@@ -53,6 +68,10 @@ function App() {
   }
 
   async function listNFT() {
+    if (!contract) {
+      alert("Connect wallet first.");
+      return;
+    }
     const tokenId = prompt("Enter Token ID to list:");
     const price = prompt("Enter price in ETH:");
     if (!tokenId || !price) return;
@@ -67,6 +86,10 @@ function App() {
   }
 
   async function buyNFT(tokenId, price) {
+    if (!contract) {
+      alert("Connect wallet first.");
+      return;
+    }
     try {
       const tx = await contract.buyToken(tokenId, {
         value: ethers.parseEther(price),
@@ -81,39 +104,53 @@ function App() {
 
   async function loadListings() {
     try {
+      const publicContract = new ethers.Contract(contractAddress, contractABI, readOnlyProvider);
+      const totalTokens = await publicContract.tokenCount();
       const active = [];
-      for (let i = 1; i <= 20; i++) {
-        const item = await contract.getListing(i);
+
+      for (let i = 1; i <= totalTokens; i++) {
+        const item = await publicContract.getListing(i);
         if (item.active) {
           let image = "";
           try {
-            const tokenUri = await contract.tokenURI(item.tokenId);
-            const metadata = await fetch(tokenUri).then(res => res.json());
+            const tokenUri = await publicContract.tokenURI(item.tokenId);
+            const metadata = await fetch(tokenUri).then((res) => res.json());
             image = metadata.image || "";
           } catch (metaErr) {
             console.warn(`Failed to load metadata for token ${item.tokenId}:`, metaErr);
           }
-
           active.push({ ...item, image });
         }
       }
+
       setListings(active);
+      setStats({
+        totalMinted: totalTokens.toString(),
+        totalListings: active.length,
+      });
     } catch (err) {
       console.error("Error loading listings", err);
     }
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "2rem", color: darkMode ? "#fff" : "#000" }}>
       <LogoTitle />
       <button onClick={connectWallet}>🔌 Connect Wallet</button>
       <button onClick={mintNFT}>🎨 Mint NFT (Metadata + IPFS)</button>
       <button onClick={listNFT}>📤 List NFT</button>
-      <button onClick={loadListings}>🔄 Load Listings</button>
+      <button onClick={loadListings}>🔄 Refresh Listings</button>
+      <button onClick={() => setDarkMode(!darkMode)}>
+        {darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+      </button>
+
+      <hr />
+      <h3>📊 Stats</h3>
+      <p>Total NFTs Minted: {stats.totalMinted}</p>
+      <p>Active Listings: {stats.totalListings}</p>
 
       <hr />
       <PinataUploader onUpload={(url) => setIpfsImageUrl(url)} />
-
       <MetadataUploader
         imageUrl={ipfsImageUrl}
         onMetadataUploaded={(url) => setMetadataUrl(url)}
@@ -125,7 +162,12 @@ function App() {
       {listings.map((item, index) => (
         <div
           key={index}
-          style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}
+          style={{
+            border: "1px solid #ccc",
+            padding: "1rem",
+            marginBottom: "1rem",
+            backgroundColor: darkMode ? "#1e1e1e" : "#f9f9f9",
+          }}
         >
           <img
             src={item.image || "/placeholder.png"}
@@ -135,7 +177,17 @@ function App() {
           <p><strong>Token ID:</strong> {item.tokenId.toString()}</p>
           <p><strong>Seller:</strong> {item.seller}</p>
           <p><strong>Price:</strong> {ethers.formatEther(item.price)} ETH</p>
-          <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>Buy</button>
+          <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>
+            Buy
+          </button>
+          <a
+            href={`https://twitter.com/intent/tweet?text=Check%20out%20this%20NFT%20on%20LifeIsNFTs!%0AToken%20ID:%20${item.tokenId.toString()}%0APrice:%20${ethers.formatEther(item.price)}%20ETH%0A${window.location.href}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "inline-block", marginTop: "10px", color: "#1DA1F2" }}
+          >
+            🐦 Share on X
+          </a>
         </div>
       ))}
     </div>
