@@ -4,6 +4,8 @@ import Web3Modal from "web3modal";
 import { contractAddress, contractABI } from "./constants";
 import PinataUploader from "./PinataUploader";
 import MetadataUploader from "./MetadataUploader"; // ✅ NEW
+import LogoTitle from "./LogoTitle"; // ✅ This imports the logo component
+
 
 function App() {
   const [provider, setProvider] = useState(null);
@@ -96,7 +98,7 @@ function App() {
 
   return (
     <div style={{ padding: "2rem" }}>
-      <h1>🖼️ NFT Marketplace (Sepolia)</h1>
+      <LogoTitle />
       <button onClick={connectWallet}>🔌 Connect Wallet</button>
       <button onClick={mintNFT}>🎨 Mint NFT (Metadata + IPFS)</button>
       <button onClick={listNFT}>📤 List NFT</button>
