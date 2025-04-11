@@ -4,16 +4,15 @@ import Web3Modal from "web3modal";
 import { contractAddress, contractABI } from "./constants";
 import PinataUploader from "./PinataUploader";
 import MetadataUploader from "./MetadataUploader"; // ✅ NEW
-import LogoTitle from "./LogoTitle"; // ✅ This imports the logo component
-
+import LogoTitle from "./LogoTitle"; // ✅ Logo component
 
 function App() {
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [contract, setContract] = useState(null);
   const [listings, setListings] = useState([]);
-  const [ipfsImageUrl, setIpfsImageUrl] = useState(""); // ✅ Image URL from IPFS
-  const [metadataUrl, setMetadataUrl] = useState("");   // ✅ Metadata URL
+  const [ipfsImageUrl, setIpfsImageUrl] = useState("");
+  const [metadataUrl, setMetadataUrl] = useState("");
 
   useEffect(() => {
     connectWallet();
@@ -37,7 +36,6 @@ function App() {
     }
   }
 
-  // ✅ Updated to use metadataUri
   async function mintNFT() {
     if (!metadataUrl) {
       alert("Please upload metadata first.");
@@ -91,11 +89,11 @@ function App() {
           try {
             const tokenUri = await contract.tokenURI(item.tokenId);
             const metadata = await fetch(tokenUri).then(res => res.json());
-            image = metadata.image || ""; // Fallback if no image
+            image = metadata.image || "";
           } catch (metaErr) {
             console.warn(`Failed to load metadata for token ${item.tokenId}:`, metaErr);
           }
-  
+
           active.push({ ...item, image });
         }
       }
@@ -104,8 +102,7 @@ function App() {
       console.error("Error loading listings", err);
     }
   }
-  
-  
+
   return (
     <div style={{ padding: "2rem" }}>
       <LogoTitle />
@@ -115,10 +112,8 @@ function App() {
       <button onClick={loadListings}>🔄 Load Listings</button>
 
       <hr />
-      {/* ✅ Upload Image to IPFS */}
       <PinataUploader onUpload={(url) => setIpfsImageUrl(url)} />
 
-      {/* ✅ Upload Metadata to IPFS */}
       <MetadataUploader
         imageUrl={ipfsImageUrl}
         onMetadataUploaded={(url) => setMetadataUrl(url)}
@@ -128,13 +123,20 @@ function App() {
       <h2>🛍️ Listings</h2>
       {listings.length === 0 && <p>No active listings.</p>}
       {listings.map((item, index) => (
-  <div key={index} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
-    <img src={item.image} alt="NFT Preview" style={{ width: "200px", marginBottom: "10px" }} />
-    <p><strong>Token ID:</strong> {item.tokenId.toString()}</p>
-    <p><strong>Seller:</strong> {item.seller}</p>
-    <p><strong>Price:</strong> {ethers.formatEther(item.price)} ETH</p>
-    <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>Buy</button>
-  </div>
+        <div
+          key={index}
+          style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}
+        >
+          <img
+            src={item.image || "/placeholder.png"}
+            alt="NFT Preview"
+            style={{ width: "200px", marginBottom: "10px" }}
+          />
+          <p><strong>Token ID:</strong> {item.tokenId.toString()}</p>
+          <p><strong>Seller:</strong> {item.seller}</p>
+          <p><strong>Price:</strong> {ethers.formatEther(item.price)} ETH</p>
+          <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>Buy</button>
+        </div>
       ))}
     </div>
   );
