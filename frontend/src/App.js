@@ -87,7 +87,9 @@ function App() {
       for (let i = 1; i <= 20; i++) {
         const item = await contract.getListing(i);
         if (item.active) {
-          active.push(item);
+          const tokenUri = await contract.tokenURI(item.tokenId);
+          const metadata = await fetch(tokenUri).then(res => res.json());
+          active.push({ ...item, image: metadata.image });
         }
       }
       setListings(active);
@@ -95,7 +97,7 @@ function App() {
       console.error("Error loading listings", err);
     }
   }
-
+  
   return (
     <div style={{ padding: "2rem" }}>
       <LogoTitle />
@@ -118,12 +120,13 @@ function App() {
       <h2>🛍️ Listings</h2>
       {listings.length === 0 && <p>No active listings.</p>}
       {listings.map((item, index) => (
-        <div key={index} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
-          <p><strong>Token ID:</strong> {item.tokenId.toString()}</p>
-          <p><strong>Seller:</strong> {item.seller}</p>
-          <p><strong>Price:</strong> {ethers.formatEther(item.price)} ETH</p>
-          <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>Buy</button>
-        </div>
+  <div key={index} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
+    <img src={item.image} alt="NFT Preview" style={{ width: "200px", marginBottom: "10px" }} />
+    <p><strong>Token ID:</strong> {item.tokenId.toString()}</p>
+    <p><strong>Seller:</strong> {item.seller}</p>
+    <p><strong>Price:</strong> {ethers.formatEther(item.price)} ETH</p>
+    <button onClick={() => buyNFT(item.tokenId, ethers.formatEther(item.price))}>Buy</button>
+  </div>
       ))}
     </div>
   );
